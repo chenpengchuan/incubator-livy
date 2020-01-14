@@ -23,13 +23,12 @@ import java.security.PrivilegedExceptionAction
 import java.util.UUID
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.security.UserGroupInformation
-
 import org.apache.livy.{LivyConf, Logging, Utils}
 import org.apache.livy.utils.AppInfo
+import org.scalatra.servlet.FileItem
 
 object Session {
   trait RecoveryMetadata { val id: Int }
@@ -244,6 +243,31 @@ abstract class Session(
 
     try {
       val filePath = new Path(getStagingDir(fs), name)
+      debug(s"Uploading user file to $filePath")
+
+      val outFile = fs.create(filePath, true)
+      val buffer = new Array[Byte](512 * 1024)
+      var read = -1
+      try {
+        while ({read = dataStream.read(buffer); read != -1}) {
+          outFile.write(buffer, 0, read)
+        }
+      } finally {
+        outFile.close()
+      }
+      filePath.toUri
+    } finally {
+      fs.close()
+    }
+  }
+
+  protected def uploadResourceToHDFS(file: FileItem, hdfsPath: String): URI = doAsOwner {
+    val dataStream = file.getInputStream
+    val fs = FileSystem.newInstance(livyConf.hadoopConf)
+    val name = file.name
+
+    try {
+      val filePath = new Path(hdfsPath, name)
       debug(s"Uploading user file to $filePath")
 
       val outFile = fs.create(filePath, true)

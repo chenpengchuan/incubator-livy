@@ -18,22 +18,22 @@
 package org.apache.livy.server.interactive
 
 import java.net.URI
+
 import javax.servlet.http.HttpServletRequest
-
-import scala.collection.JavaConverters._
-import scala.concurrent._
-import scala.concurrent.duration._
-
+import org.apache.commons.lang.StringUtils
+import org.apache.livy.client.common.HttpMessages
+import org.apache.livy.client.common.HttpMessages._
+import org.apache.livy.server.recovery.SessionStore
+import org.apache.livy.server.{AccessManager, SessionServlet}
+import org.apache.livy.sessions._
+import org.apache.livy._
 import org.json4s.jackson.Json4sScalaModule
 import org.scalatra._
 import org.scalatra.servlet.FileUploadSupport
 
-import org.apache.livy.{CompletionRequest, ExecuteRequest, JobHandle, LivyConf, Logging}
-import org.apache.livy.client.common.HttpMessages
-import org.apache.livy.client.common.HttpMessages._
-import org.apache.livy.server.{AccessManager, SessionServlet}
-import org.apache.livy.server.recovery.SessionStore
-import org.apache.livy.sessions._
+import scala.collection.JavaConverters._
+import scala.concurrent._
+import scala.concurrent.duration._
 
 object InteractiveSessionServlet extends Logging
 
@@ -244,6 +244,23 @@ class InteractiveSessionServlet(
     withModifyAccessSession { lsession =>
       val jobId = params("jobid").toLong
       lsession.cancelJob(jobId)
+    }
+  }
+
+  post("/:id/upload-hdfs-file") {
+    withModifyAccessSession { lsession =>
+      val hdfsPath: String = request.getParameter("hdfsPath");
+      if (hdfsPath != None && StringUtils.isNotEmpty(hdfsPath)){
+        fileParams.get("file") match {
+          case Some(file) =>
+            lsession.uploadFile(file, hdfsPath)
+          case None =>
+            BadRequest("No file sent!")
+        }
+      } else {
+        BadRequest("No hdfsPath sent!")
+      }
+
     }
   }
 

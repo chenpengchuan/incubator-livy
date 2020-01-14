@@ -29,11 +29,9 @@ import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.{Random, Try}
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.apache.hadoop.fs.Path
 import org.apache.spark.launcher.SparkLauncher
-
 import org.apache.livy._
 import org.apache.livy.client.common.HttpMessages._
 import org.apache.livy.rsc.{PingJob, RSCClient, RSCConf}
@@ -44,6 +42,7 @@ import org.apache.livy.sessions._
 import org.apache.livy.sessions.Session._
 import org.apache.livy.sessions.SessionState.Dead
 import org.apache.livy.utils._
+import org.scalatra.servlet.FileItem
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class InteractiveRecoveryMetadata(
@@ -538,6 +537,10 @@ class InteractiveSession(
 
   def addFile(fileStream: InputStream, fileName: String): Unit = {
     addFile(copyResourceToHDFS(fileStream, fileName))
+  }
+
+  def uploadFile(file: FileItem, hdfsPaht: String): Unit = {
+    uploadResourceToHDFS(file, hdfsPaht)
   }
 
   def addJar(jarStream: InputStream, jarName: String): Unit = {
